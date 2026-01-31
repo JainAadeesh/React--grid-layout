@@ -73,8 +73,12 @@ h1 {
   overflow: hidden;
   position: relative;
   user-select: none;
+  cursor: grab;
 }
 
+.grid-item:active {
+  cursor: grabbing;
+}
 .grid-item:hover {
   transform: translateY(-2px);
   background: var(--item-bg-hover);
@@ -97,28 +101,6 @@ h1 {
   border: 2px dashed rgba(59, 130, 246, 0.4);
   border-radius: 16px;
   opacity: 0.6;
-}
-
-/* Drag Handle */
-.drag-handle {
-  position: absolute;
-  top: 12px;
-  left: 12px;
-  cursor: grab;
-  padding: 6px;
-  border-radius: 8px;
-  color: rgba(255, 255, 255, 0.4);
-  background: rgba(255, 255, 255, 0.05);
-  transition: all 0.2s;
-}
-
-.drag-handle:hover {
-  color: #fff;
-  background: rgba(255, 255, 255, 0.1);
-}
-
-.drag-handle:active {
-  cursor: grabbing;
 }
 
 /* Resize Handle */

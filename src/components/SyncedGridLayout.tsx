@@ -46,7 +46,6 @@ export const SyncedGridLayout: React.FC = () => {
           onLayoutChange={onLayoutChange}
           onBreakpointChange={onBreakpointChange}
           dragConfig={{
-            handle: ".drag-handle",
             enabled: true,
           }}
           resizeConfig={{
