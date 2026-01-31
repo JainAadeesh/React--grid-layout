@@ -4,8 +4,7 @@ import {
   generateInitialLayouts,
   loadLayoutFromStorage,
   saveLayoutToStorage,
-  mapMobileToWeb,
-  mapWebToMobile,
+  syncAllLayouts,
 } from "../utils/layoutSync";
 import type { Layout, Layouts } from "../utils/layoutSync";
 import _ from "lodash";
@@ -13,6 +12,7 @@ import _ from "lodash";
 interface LayoutContextType {
   layouts: Layouts;
   updateLayout: (currentLayout: Layout[], allLayouts: Layouts, currentBreakpoint: string) => void;
+  syncAndSave: (currentLayout: Layout[], currentBreakpoint: string) => void;
   resetLayout: () => void;
 }
 
@@ -55,40 +55,21 @@ export const LayoutProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     };
   }, []);
 
-  // Layout Update Logic
+  // Layout Update Logic (Local breakpoint only)
   const updateLayout = useCallback(
     (currentLayout: Layout[], allLayouts: Layouts, currentBreakpoint: string) => {
-      const isMobile = currentBreakpoint === "xs" || currentBreakpoint === "xxs";
-      let newLayouts = { ...layouts, ...allLayouts };
-
-      if (isMobile) {
-        // Mobile Sync
-        const currentWebLayout = layouts.lg || generateInitialLayouts().lg;
-        const newWebLayout = mapMobileToWeb(currentLayout, currentWebLayout);
-        
-        newLayouts = {
-          ...newLayouts,
-          [currentBreakpoint]: currentLayout, 
-          lg: newWebLayout,
-          md: newWebLayout,
-          sm: newWebLayout,
-        };
-      } else {
-        // Web Sync
-        const currentMobileLayout = layouts.xs || generateInitialLayouts().xs;
-        const newMobileLayout = mapWebToMobile(currentLayout, currentMobileLayout);
-        
-        newLayouts = {
-          ...newLayouts,
-          [currentBreakpoint]: currentLayout,
-          xs: newMobileLayout,
-          xxs: newMobileLayout, 
-          lg: currentLayout,
-          md: currentLayout,  
-          sm: currentLayout,
-        };
+      const newLayouts = { ...layouts, ...allLayouts, [currentBreakpoint]: currentLayout };
+      if (!_.isEqual(layouts, newLayouts)) {
+        setLayouts(newLayouts);
       }
+    },
+    [layouts]
+  );
 
+  // Persistence Logic (Sync all breakpoints and Save)
+  const syncAndSave = useCallback(
+    (currentLayout: Layout[], currentBreakpoint: string) => {
+      const newLayouts = syncAllLayouts(currentLayout, currentBreakpoint, layouts);
       if (!_.isEqual(layouts, newLayouts)) {
         setLayouts(newLayouts);
         saveLayoutToStorage(newLayouts);
@@ -107,8 +88,9 @@ export const LayoutProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const value = useMemo(() => ({
     layouts,
     updateLayout,
+    syncAndSave,
     resetLayout
-  }), [layouts, updateLayout, resetLayout]);
+  }), [layouts, updateLayout, syncAndSave, resetLayout]);
 
   return (
     <LayoutContext.Provider value={value}>

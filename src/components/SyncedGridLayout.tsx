@@ -8,15 +8,28 @@ import "react-resizable/css/styles.css";
 
 // Main Component
 export const SyncedGridLayout: React.FC = () => {
-  const { layouts, updateLayout } = useLayoutContext();
+  const { layouts, updateLayout, syncAndSave } = useLayoutContext();
   const { width, containerRef, mounted } = useContainerWidth();
   
   const [currentBreakpoint, setCurrentBreakpoint] = React.useState<string>("lg");
+  // Keep track of the current breakpoint in a ref for use in stop handlers
+  const breakpointRef = React.useRef(currentBreakpoint);
+  
+  React.useEffect(() => {
+    breakpointRef.current = currentBreakpoint;
+  }, [currentBreakpoint]);
 
-  // Layout Change Handler
+  // Real-time Layout Change Handler (Local only)
   const onLayoutChange = useCallback((layout: any, allLayouts: any) => {
-    updateLayout(layout, allLayouts, currentBreakpoint);
-  }, [updateLayout, currentBreakpoint]);
+    if (mounted && width > 0) {
+      updateLayout(layout, allLayouts, currentBreakpoint);
+    }
+  }, [updateLayout, currentBreakpoint, mounted, width]);
+
+  // Persistence Handler (Sync all breakpoints when user interaction finishes)
+  const onInteractionStop = useCallback((layout: any) => {
+    syncAndSave(layout, breakpointRef.current);
+  }, [syncAndSave]);
 
   // Breakpoint Handler
   const onBreakpointChange = useCallback((newBreakpoint: string) => {
@@ -45,6 +58,8 @@ export const SyncedGridLayout: React.FC = () => {
           margin={[16, 16]}
           onLayoutChange={onLayoutChange}
           onBreakpointChange={onBreakpointChange}
+          onDragStop={onInteractionStop}
+          onResizeStop={onInteractionStop}
           dragConfig={{
             enabled: true,
           }}

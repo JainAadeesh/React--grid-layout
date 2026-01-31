@@ -57,56 +57,51 @@ export const generateInitialLayouts = (): Layouts => {
   };
 };
 
-// Sort Helper
+// Helper to determine items per row based on column count
+const getItemsPerRow = (cols: number) => {
+  if (cols >= 12) return 3; // lg
+  if (cols >= 10) return 3; // md
+  if (cols >= 6) return 2;  // sm
+  return 1;                 // xs, xxs
+};
+
+// Sort Helper - Row-major order (top to bottom, left to right)
 export const sortLayout = (layout: Layout[]): Layout[] => {
   return [...layout].sort((a, b) => {
-    if (a.y === b.y) return a.x - b.x;
-    return a.y - b.y;
+    if (a.y !== b.y) return a.y - b.y;
+    return a.x - b.x;
   });
 };
 
-// Mobile -> Web Mapping
-export const mapMobileToWeb = (mobileLayout: Layout[], currentWebLayout: Layout[]): Layout[] => {
-  const sortedMobile = sortLayout(mobileLayout);
-  
-  const sortedWebSlots = sortLayout(currentWebLayout).map(item => ({
-    x: item.x,
-    y: item.y,
-    w: item.w,
-    h: item.h
-  }));
+// Sync logic: Force all layouts into a stable sequential flow based on sorted order
+export const syncAllLayouts = (
+  changedLayout: Layout[],
+  currentBreakpoint: string,
+  allLayouts: Layouts
+): Layouts => {
+  const sortedItems = sortLayout(changedLayout).map(item => item.i);
+  const newLayouts: Layouts = { ...allLayouts };
 
-  return sortedMobile.map((mobileItem, index) => {
-    const targetSlot = sortedWebSlots[index] || { x: 0, y: Infinity, w: 4, h: 2 }; 
-    const originalWebItem = currentWebLayout.find(l => l.i === mobileItem.i);
+  Object.keys(COLS).forEach((breakpoint) => {
+    const cols = (COLS as any)[breakpoint];
+    const itemsPerRow = getItemsPerRow(cols);
+    const itemWidth = Math.floor(cols / itemsPerRow);
     
-    return {
-      ...mobileItem,
-      x: targetSlot.x,
-      y: targetSlot.y,
-      w: targetSlot.w,
-      h: targetSlot.h,
-      static: originalWebItem?.static,
-    };
-  });
-};
+    newLayouts[breakpoint] = sortedItems.map((id, index) => {
+      const x = (index % itemsPerRow) * itemWidth;
+      const y = Math.floor(index / itemsPerRow) * 2;
 
-// Web -> Mobile Mapping
-export const mapWebToMobile = (webLayout: Layout[], currentMobileLayout: Layout[]): Layout[] => {
-  const sortedWeb = sortLayout(webLayout);
-
-  return sortedWeb.map((webItem, index) => {
-    const originalMobileItem = currentMobileLayout.find(l => l.i === webItem.i);
-    
-    return {
-      ...webItem,
-      x: 0,
-      y: index * 2,
-      w: originalMobileItem ? originalMobileItem.w : 2,
-      h: originalMobileItem ? originalMobileItem.h : 2,
-      static: originalMobileItem?.static,
-    };
+      return {
+        i: id,
+        x: x,
+        y: y,
+        w: itemWidth,
+        h: 2
+      };
+    });
   });
+
+  return newLayouts;
 };
 
 // Local Storage Save
