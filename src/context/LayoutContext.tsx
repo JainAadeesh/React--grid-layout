@@ -12,8 +12,7 @@ import _ from "lodash";
 interface LayoutContextType {
   layouts: Layouts;
   updateLayout: (currentLayout: Layout[], allLayouts: Layouts, currentBreakpoint: string) => void;
-  syncAndSave: (currentLayout: Layout[], currentBreakpoint: string) => void;
-  resetLayout: () => void;
+  syncAndSave: (currentLayout: Layout[]) => void;
 }
 
 const LayoutContext = createContext<LayoutContextType | undefined>(undefined);
@@ -33,8 +32,10 @@ export const LayoutProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   // Storage Sync Listener
   useEffect(() => {
     const handleStorageChange = (e: StorageEvent | Event) => {
+      // If it's a standard storage event from another tab, check the key
       if (e.type === "storage" && (e as StorageEvent).key !== "rgl-layouts") return;
       
+      // Load and update state
       const saved = loadLayoutFromStorage();
       if (saved) {
         setLayouts((prev: Layouts) => {
@@ -57,40 +58,39 @@ export const LayoutProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   // Layout Update Logic (Local breakpoint only)
   const updateLayout = useCallback(
-    (currentLayout: Layout[], allLayouts: Layouts, currentBreakpoint: string) => {
-      const newLayouts = { ...layouts, ...allLayouts, [currentBreakpoint]: currentLayout };
-      if (!_.isEqual(layouts, newLayouts)) {
-        setLayouts(newLayouts);
-      }
+    (currentLayout: Layout[], _allLayouts: Layouts, currentBreakpoint: string) => {
+      setLayouts((prev) => {
+        const newLayouts = { ...prev, [currentBreakpoint]: currentLayout };
+        if (!_.isEqual(prev, newLayouts)) {
+          return newLayouts;
+        }
+        return prev;
+      });
     },
-    [layouts]
+    []
   );
 
   // Persistence Logic (Sync all breakpoints and Save)
   const syncAndSave = useCallback(
-    (currentLayout: Layout[], currentBreakpoint: string) => {
-      const newLayouts = syncAllLayouts(currentLayout, currentBreakpoint, layouts);
-      if (!_.isEqual(layouts, newLayouts)) {
-        setLayouts(newLayouts);
-        saveLayoutToStorage(newLayouts);
-      }
+    (currentLayout: Layout[]) => {
+      const newLayouts = syncAllLayouts(currentLayout);
+      setLayouts((prev) => {
+        if (!_.isEqual(prev, newLayouts)) {
+          saveLayoutToStorage(newLayouts);
+          return newLayouts;
+        }
+        return prev;
+      });
     },
-    [layouts]
+    []
   );
 
-  // Reset Layout
-  const resetLayout = useCallback(() => {
-    const initial = generateInitialLayouts();
-    setLayouts(initial);
-    saveLayoutToStorage(initial);
-  }, []);
 
   const value = useMemo(() => ({
     layouts,
     updateLayout,
-    syncAndSave,
-    resetLayout
-  }), [layouts, updateLayout, syncAndSave, resetLayout]);
+    syncAndSave
+  }), [layouts, updateLayout, syncAndSave]);
 
   return (
     <LayoutContext.Provider value={value}>

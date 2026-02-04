@@ -21,19 +21,21 @@ export const SyncedGridLayout: React.FC = () => {
 
   // Real-time Layout Change Handler (Local only)
   const onLayoutChange = useCallback((layout: any, allLayouts: any) => {
+    // Only update if we have a valid mount and width
     if (mounted && width > 0) {
-      updateLayout(layout, allLayouts, currentBreakpoint);
+      updateLayout(layout, allLayouts, breakpointRef.current);
     }
-  }, [updateLayout, currentBreakpoint, mounted, width]);
+  }, [updateLayout, mounted, width]);
 
   // Persistence Handler (Sync all breakpoints when user interaction finishes)
   const onInteractionStop = useCallback((layout: any) => {
-    syncAndSave(layout, breakpointRef.current);
+    syncAndSave(layout);
   }, [syncAndSave]);
 
   // Breakpoint Handler
   const onBreakpointChange = useCallback((newBreakpoint: string) => {
     setCurrentBreakpoint(newBreakpoint);
+    breakpointRef.current = newBreakpoint;
   }, []);
 
   // Render Items
